@@ -635,12 +635,12 @@ function wire(){
 }
 
 document.addEventListener('click', (e) => {
-  const t = e.target.closest('[data-close]');
-  if(t && (t.dataset.close === '1') && (t === e.target || t.classList.contains('sheet') || t.tagName === 'BUTTON')) closeSheet();
+  if(e.target.classList && e.target.classList.contains('sheet')){ closeSheet(); return; }
+  if(e.target.closest('button[data-close]')){ closeSheet(); return; }
   const h = e.target.closest('[data-hist]');
   if(h && $('sheets').contains(h)) openHistory(h.dataset.hist);
 });
-
+  
 document.querySelectorAll('.tab').forEach(b => b.onclick = () => { S.tab = b.dataset.tab; render(); });
 $('prev').onclick     = () => { S.date = shiftDate(S.date,-1); render(); };
 $('next').onclick     = () => { S.date = shiftDate(S.date, 1); render(); };
