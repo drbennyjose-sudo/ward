@@ -88,6 +88,8 @@ table.t tbody tr:active td{background:#F2F7F3}
 .btn:active{opacity:.82}
 .btn:disabled{background:#B6C2BA;cursor:default}
 .btn.ghost{background:none;color:var(--band);border:1px solid var(--rule);font-weight:600}
+.btn.danger{background:var(--pos);color:#fff;border:none}
+.btn.ghost.danger{background:none;color:var(--pos);border:1px solid #E4C4C0}
 .btn.sm{padding:9px;font-size:11.5px}
 .addrow{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:11px}
 .add{background:var(--band);color:#fff;border:none;border-radius:22px;padding:9px 15px 9px 12px;font-size:12.5px;font-weight:700;letter-spacing:.05em;cursor:pointer;display:flex;align-items:center;gap:6px;flex:none;font-family:inherit}
@@ -174,23 +176,20 @@ table.t tbody tr:active td{background:#F2F7F3}
 
 <div id="sheets"></div>
 <div id="toast"></div>
+<script src="config.js"></script>
 <script type="module">
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4';
 
 /* ==================================================================
-   1. YOUR SETTINGS  —  paste the two values from Supabase here
-   ==================================================================
-   Supabase dashboard → Project Settings → API
-     • Project URL      → SUPABASE_URL
-     • anon public key  → SUPABASE_ANON_KEY
+   Settings live in config.js, next to this file.
+   Nothing in here needs editing when you update the app.
    ================================================================== */
 
-const SUPABASE_URL      = "https://qxcdadzpjeyhufqnilja.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF4Y2RhZHpwamV5aHVmcW5pbGphIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU5Mzg5MDYsImV4cCI6MjEwMTUxNDkwNn0.yLHg786Z5rQf_5QPzEAir-LMhHFn8z0N-_VUvpGK4w4";
+const CFG = window.WARD_CONFIG || {};
+const SUPABASE_URL      = CFG.url || "";
+const SUPABASE_ANON_KEY = CFG.key || "";
 
-/* ================================================================== */
-
-const CONFIGURED = !SUPABASE_URL.startsWith("PASTE") && !SUPABASE_ANON_KEY.startsWith("PASTE");
+const CONFIGURED = SUPABASE_URL.startsWith("http") && SUPABASE_ANON_KEY.length > 20;
 const sb = CONFIGURED ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
 
 /* ---------------- helpers ---------------- */
@@ -303,6 +302,15 @@ async function savePatient(p){
   return data;
 }
 
+async function deletePatient(pid){
+  const { error } = await sb.from('patients').delete().eq('id', pid);
+  if(error){ toast(error.message); return false; }
+  S.patients = S.patients.filter(p => p.id !== pid);
+  delete S.readings[pid];
+  render();
+  return true;
+}
+
 /* ---------------- auth ---------------- */
 async function doSignIn(){
   const email = $('em').value.trim(), pw = $('pw').value;
@@ -320,8 +328,8 @@ function loginMsg(t, kind){
 async function boot(){
   if(!CONFIGURED){
     document.body.innerHTML = `<div id="login"><h1>Ward Balance</h1>
-      <p class="lead">Not set up yet. Open <b>index.html</b>, find the settings block near the top of the script,
-      and paste in your Supabase project URL and anon public key.</p></div>`;
+      <p class="lead">Settings not found. There should be a file called <b>config.js</b> sitting next to
+      index.html, holding your Supabase project URL and anon public key.</p></div>`;
     $('login').classList.remove('hide');
     return;
   }
@@ -447,6 +455,7 @@ function viewWard(){
         <div class="row" style="margin-top:11px;margin-bottom:0">
           <button class="btn ghost sm" data-hist="${p.id}">Full chart</button>
           <button class="btn ghost sm" data-toggle="${p.id}">${p.active?'Discharge':'Re-admit'}</button>
+          <button class="btn ghost sm danger" data-del="${p.id}" style="flex:0 0 auto;padding-left:14px;padding-right:14px">Delete</button>
         </div>
       </div>`;
     }).join('');
@@ -567,6 +576,38 @@ function openHistory(pid){
   </div></div>`;
 }
 
+function openDelete(pid){
+  const p = S.patients.find(x => x.id === pid); if(!p) return;
+  const days = Object.keys(S.readings[pid]||{}).length;
+
+  $('sheets').innerHTML = `<div class="sheet" data-close="1"><div>
+    <h2>Delete ${esc(p.name)}?</h2>
+    <div class="sub">This removes the patient and all ${days} charted day${days===1?'':'s'} for good. It cannot be undone.</div>
+    <div class="card">
+      <div class="note" style="margin-top:0">If you only want them off the daily chart, close this and use
+      <b>Discharge</b> instead — that keeps the record.</div>
+      <div class="f" style="margin-top:12px">
+        <label>Type the patient's name to confirm</label>
+        <input class="txt" id="d_confirm" placeholder="${esc(p.name)}" autocapitalize="off" spellcheck="false">
+      </div>
+    </div>
+    <button class="btn danger" id="doDelete" disabled>Delete permanently</button>
+    <button class="btn ghost" style="margin-top:9px" data-close="1">Cancel</button>
+  </div></div>`;
+
+  const inp = $('d_confirm'), btn = $('doDelete');
+  inp.focus();
+  inp.addEventListener('input', () => {
+    btn.disabled = inp.value.trim().toLowerCase() !== p.name.trim().toLowerCase();
+  });
+  btn.onclick = async () => {
+    btn.disabled = true; btn.textContent = 'Deleting…';
+    const ok = await deletePatient(pid);
+    if(ok){ closeSheet(); toast('Deleted'); }
+    else { btn.disabled = false; btn.textContent = 'Delete permanently'; }
+  };
+}
+
 function openAdmit(){
   $('sheets').innerHTML = `<div class="sheet" data-close="1"><div>
     <h2>Admit a patient</h2>
@@ -625,6 +666,7 @@ function wire(){
     const p = S.patients.find(x => x.id === el.dataset.toggle);
     if(p) await savePatient({ ...p, active: !p.active });
   });
+  $('view').querySelectorAll('[data-del]').forEach(el => el.onclick = (e) => { e.stopPropagation(); openDelete(el.dataset.del); });
   $('view').querySelectorAll('[data-act]').forEach(el => el.onclick = async () => {
     const a = el.dataset.act;
     if(a === 'admit')   openAdmit();
@@ -640,7 +682,7 @@ document.addEventListener('click', (e) => {
   const h = e.target.closest('[data-hist]');
   if(h && $('sheets').contains(h)) openHistory(h.dataset.hist);
 });
-  
+
 document.querySelectorAll('.tab').forEach(b => b.onclick = () => { S.tab = b.dataset.tab; render(); });
 $('prev').onclick     = () => { S.date = shiftDate(S.date,-1); render(); };
 $('next').onclick     = () => { S.date = shiftDate(S.date, 1); render(); };
