@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<title>Ward Balance</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Ward">
+<meta name="theme-color" content="#22362C">
+<link rel="apple-touch-icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAJEElEQVR4nO3dwY0TSRiA0WXlSDiBhK8cyAINmUwckwkjsiABH2bC2YNXs6tFwt1tu6t7v/dOMAJUqpL+r6suvHv/+dMfAPT8OXoBAIwhAABRAgAQJQAAUQIAECUAAFECABAlAABRAgAQJQAAUQIAECUAAFECABAlAABRAgAQJQAAUQIAECUAAFECABAlAABRAgAQJQAAUQIAECUAAFECABAlAABRAgAQJQAAUQIAECUAAFECABAlAABRAgAQJQAAUQIAECUAAFECABAlAABRAgAQJQAAUQIAECUAAFECABAlAABRAgAQJQAAUQIAECUAAFECABAlAABRAgAQJQAAUQIAECUAAFECABAlAABRAgAQJQAAUQIAECUAAFECABAlAABRAgAQJQAAUQIAECUAAFECABAlAABRAgAQJQAAUQIAECUAAFECABAlAABRAgAQJQAAUQIAECUAAFECABAlAABRAgAQJQAAUQIAECUAAFECABAlAABRAgAQJQAAUQIAECUAAFECABAlAABRAgAQJQAAUQIAECUAAFECABAlAABRAgAQJQAAUQIAECUAAFECABAlAABRAgAQJQAAUQIAECUAAFECABAlAABRAgAQJQAAUQIAECUAAFECABAlAABRAgAQJQAAUQIAEHUYvQAY4MPx468/fD29rL8SGMgNACBKAACiBAAgSgAAogQAIEoAAKIEACBKAACiBAAgSgAAogQAIEoAAKIEACBKAACiBAAgSgAAogQAIEoAAKIEACBKAACiBAAgSgAAogQAIEoAAKIEACBKAACiBAAgSgAAogQAIOowegH87fj0PHoJe3J6fBi9BNg9ARjM3F/mbd+UABbzBDSS6X89ewiLuQGMYWzd0HkzXQVgLjeAAUz/e7CrMJcArM2cuh97C7MIAECUAKzKJ+q92WGYTgDWYzatwz7DRAIAECUAAFECsBLvEmuy2zCFAABECQBAlAAARAkAQJQAAEQJAECUAABECQBAlAAARAkAQJQAAEQJAECUAABECQBAlAAARAkAQJQAAEQJAECUAABECQBAlAAARAkAQJQAAEQJAECUAABECQBAlAAARAkAQJQAAEQJAECUAABECQBAlAAARAkAQJQArOT0+DB6CSF2G6YQAIAoAQCIEoD1eJdYh32GiQRgVWbTvdlhmE4AAKIEYG0+Ue/H3sIsAjCAOXUPdhXmOoxeQNR5Wh2fnkcv5P/A6Idl3ABGMrmuZw9hMTeAwd7ml9vALOY+XE8AtsJEA1bmCQggSgAAogQAIEoAAKIEACBKAACiBAAgSgAAogQAIEoAAKIEACBKAACiBAAgSgAAogQAIEoAAKIEACBKAACiBAAgSgAAovyn8HAbP799ffv1l+8//vPbESuCCwQArvLvQX/xzygBm+IJCJabMv2v+fNwV24AsMTiUX7+i64CbIEbAMx2/Ye8qwBbIAAwz61mtwYwnAAARAkAzHDbz3aXAMYSAJjqHvNaAxhIAACiBAAgSgBgkvu91XgFYhQBAIgSAIAoAQCIEgCAKAEAiBIAgCgBAIgSAIAoAQCIEgCAKAEAiBIAgCgBAIgSAIAoAQCIEgCAKAEAiBIAgCgBAIgSAIAoAQCIEgCAKAEAiBIAgCgBAIgSAIAoAQCIEgCAKAEAiBIAgCgBAIgSAIAoAQCIEgCAKAGASb58/7G7fxl+TwAAogQAIEoAYKp7vNV4/2EgAYAZbjuvTX/GEgCAKAGAeW712e7zn+EEAGa7fnab/mzBYfQCYJfOE/znt6/L/iJsgRsALDd3mpv+bIobAFzlbab/5jZg7rNN795//jR6DbC2D8ePv/7w9fSy/kpgIE9AAFECABAlAABRAgAQJQAAUQIAECUAAFECABAlAABRAgAQJQAAUQIAECUAAFECABAlAABRAgAQJQAAUQIAECUAAFECABB1GL2A3Ts+PY9eQtHp8WH0EmD3BGAhc3+st/1XAljME9ASpv92OAtYzA1gHuNmg86H4ioAc7kBzGD6b5nTgbkEYCrzZfucEcwiAABRAjCJT8u9cFIwnQBcZqbsi/OCiQQAIEoAAKIE4ALvCXvk1GAKAQCIEgCAKAEAiBIAgCgBAIgSAIAoAQCIEgCAKAEAiBIAgCgBAIgSAIAoAQCIEgCAKAEAiBIAgCgBAIgSAIAoAQCIEgCAKAEAiBIAgCgBAIgSAIAoAQCIEgCAKAEAiBIAgCgBAIgSAIAoAQCIEgCAKAEAiBIAgCgBuOD0+DB6Cczm1GAKAQCIEgCAKAG4zHvCvjgvmEgAJjFT9sJJwXQCABAlAFP5tNw+ZwSzCMAM5suWOR2Y6zB6ATtznjLHp+fRC+EfRj8s4wawhImzHc4CFnMDWOht7rgNDGHuw/UE4FomEbBTnoAAogQAIEoAAKIEACBKAACiBAAgSgAAogQAIEoAAKIEACBKAACiBAAgSgAAogQAIEoAAKIEACBKAACiBAAgSgAAogQAIEoAAKIEACBKAACiBAAgSgAAogQAIEoAAKIEACBKAACiDqMXAAO8nl5GLwHGcwMAiBIAgCgBAIgSAIAoAQCIEgCAKAEAiBIAgCgBAIgSAIAoAQCIEgCAKAEAiBIAgCgBAIgSAIAoAQCIEgCAKAEAiBIAgCgBAIgSAIAoAQCIEgCAKAEAiBIAgCgBAIgSAIAoAQCIEgCAKAEAiBIAgCgBAIgSAIAoAQCIEgCAKAEAiBIAgCgBAIgSAIAoAQCIEgCAKAEAiBIAgCgBAIgSAIAoAQCIEgCAKAEAiBIAgCgBAIgSAIAoAQCIEgCAKAEAiBIAgCgBAIgSAIAoAQCIEgCAKAEAiBIAgCgBAIgSAIAoAQCIEgCAKAEAiBIAgCgBAIgSAIAoAQCIEgCAKAEAiBIAgCgBAIgSAIAoAQCIEgCAKAEAiBIAgCgBAIgSAIAoAQCIEgCAKAEAiBIAgCgBAIgSAIAoAQCIEgCAKAEAiBIAgCgBAIgSAIAoAQCIEgCAKAEAiBIAgCgBAIgSAIAoAQCIEgCAKAEAiBIAgCgBAIgSAIAoAQCIEgCAKAEAiBIAgCgBAIgSAIAoAQCIEgCAKAEAiBIAgCgBAIgSAICovwDJ+r7hD1KQQwAAAABJRU5ErkJggg==">
+<link rel="icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAJEElEQVR4nO3dwY0TSRiA0WXlSDiBhK8cyAINmUwckwkjsiABH2bC2YNXs6tFwt1tu6t7v/dOMAJUqpL+r6suvHv/+dMfAPT8OXoBAIwhAABRAgAQJQAAUQIAECUAAFECABAlAABRAgAQJQAAUQIAECUAAFECABAlAABRAgAQJQAAUQIAECUAAFECABAlAABRAgAQJQAAUQIAECUAAFECABAlAABRAgAQJQAAUQIAECUAAFECABAlAABRAgAQJQAAUQIAECUAAFECABAlAABRAgAQJQAAUQIAECUAAFECABAlAABRAgAQJQAAUQIAECUAAFECABAlAABRAgAQJQAAUQIAECUAAFECABAlAABRAgAQJQAAUQIAECUAAFECABAlAABRAgAQJQAAUQIAECUAAFECABAlAABRAgAQJQAAUQIAECUAAFECABAlAABRAgAQJQAAUQIAECUAAFECABAlAABRAgAQJQAAUQIAECUAAFECABAlAABRAgAQJQAAUQIAECUAAFECABAlAABRAgAQJQAAUQIAECUAAFECABAlAABRAgAQJQAAUQIAECUAAFECABAlAABRAgAQJQAAUQIAECUAAFECABAlAABRAgAQJQAAUQIAECUAAFECABAlAABRAgAQJQAAUQIAEHUYvQAY4MPx468/fD29rL8SGMgNACBKAACiBAAgSgAAogQAIEoAAKIEACBKAACiBAAgSgAAogQAIEoAAKIEACBKAACiBAAgSgAAogQAIEoAAKIEACBKAACiBAAgSgAAogQAIEoAAKIEACBKAACiBAAgSgAAogQAIOowegH87fj0PHoJe3J6fBi9BNg9ARjM3F/mbd+UABbzBDSS6X89ewiLuQGMYWzd0HkzXQVgLjeAAUz/e7CrMJcArM2cuh97C7MIAECUAKzKJ+q92WGYTgDWYzatwz7DRAIAECUAAFECsBLvEmuy2zCFAABECQBAlAAARAkAQJQAAEQJAECUAABECQBAlAAARAkAQJQAAEQJAECUAABECQBAlAAARAkAQJQAAEQJAECUAABECQBAlAAARAkAQJQAAEQJAECUAABECQBAlAAARAkAQJQAAEQJAECUAABECQBAlAAARAkAQJQArOT0+DB6CSF2G6YQAIAoAQCIEoD1eJdYh32GiQRgVWbTvdlhmE4AAKIEYG0+Ue/H3sIsAjCAOXUPdhXmOoxeQNR5Wh2fnkcv5P/A6Idl3ABGMrmuZw9hMTeAwd7ml9vALOY+XE8AtsJEA1bmCQggSgAAogQAIEoAAKIEACBKAACiBAAgSgAAogQAIEoAAKIEACBKAACiBAAgSgAAogQAIEoAAKIEACBKAACiBAAgSgAAovyn8HAbP799ffv1l+8//vPbESuCCwQArvLvQX/xzygBm+IJCJabMv2v+fNwV24AsMTiUX7+i64CbIEbAMx2/Ye8qwBbIAAwz61mtwYwnAAARAkAzHDbz3aXAMYSAJjqHvNaAxhIAACiBAAgSgBgkvu91XgFYhQBAIgSAIAoAQCIEgCAKAEAiBIAgCgBAIgSAIAoAQCIEgCAKAEAiBIAgCgBAIgSAIAoAQCIEgCAKAEAiBIAgCgBAIgSAIAoAQCIEgCAKAEAiBIAgCgBAIgSAIAoAQCIEgCAKAEAiBIAgCgBAIgSAIAoAQCIEgCAKAGASb58/7G7fxl+TwAAogQAIEoAYKp7vNV4/2EgAYAZbjuvTX/GEgCAKAGAeW712e7zn+EEAGa7fnab/mzBYfQCYJfOE/znt6/L/iJsgRsALDd3mpv+bIobAFzlbab/5jZg7rNN795//jR6DbC2D8ePv/7w9fSy/kpgIE9AAFECABAlAABRAgAQJQAAUQIAECUAAFECABAlAABRAgAQJQAAUQIAECUAAFECABAlAABRAgAQJQAAUQIAECUAAFECABB1GL2A3Ts+PY9eQtHp8WH0EmD3BGAhc3+st/1XAljME9ASpv92OAtYzA1gHuNmg86H4ioAc7kBzGD6b5nTgbkEYCrzZfucEcwiAABRAjCJT8u9cFIwnQBcZqbsi/OCiQQAIEoAAKIE4ALvCXvk1GAKAQCIEgCAKAEAiBIAgCgBAIgSAIAoAQCIEgCAKAEAiBIAgCgBAIgSAIAoAQCIEgCAKAEAiBIAgCgBAIgSAIAoAQCIEgCAKAEAiBIAgCgBAIgSAIAoAQCIEgCAKAEAiBIAgCgBAIgSAIAoAQCIEgCAKAEAiBIAgCgBuOD0+DB6Cczm1GAKAQCIEgCAKAG4zHvCvjgvmEgAJjFT9sJJwXQCABAlAFP5tNw+ZwSzCMAM5suWOR2Y6zB6ATtznjLHp+fRC+EfRj8s4wawhImzHc4CFnMDWOht7rgNDGHuw/UE4FomEbBTnoAAogQAIEoAAKIEACBKAACiBAAgSgAAogQAIEoAAKIEACBKAACiBAAgSgAAogQAIEoAAKIEACBKAACiBAAgSgAAogQAIEoAAKIEACBKAACiBAAgSgAAogQAIEoAAKIEACBKAACiDqMXAAO8nl5GLwHGcwMAiBIAgCgBAIgSAIAoAQCIEgCAKAEAiBIAgCgBAIgSAIAoAQCIEgCAKAEAiBIAgCgBAIgSAIAoAQCIEgCAKAEAiBIAgCgBAIgSAIAoAQCIEgCAKAEAiBIAgCgBAIgSAIAoAQCIEgCAKAEAiBIAgCgBAIgSAIAoAQCIEgCAKAEAiBIAgCgBAIgSAIAoAQCIEgCAKAEAiBIAgCgBAIgSAIAoAQCIEgCAKAEAiBIAgCgBAIgSAIAoAQCIEgCAKAEAiBIAgCgBAIgSAIAoAQCIEgCAKAEAiBIAgCgBAIgSAIAoAQCIEgCAKAEAiBIAgCgBAIgSAIAoAQCIEgCAKAEAiBIAgCgBAIgSAIAoAQCIEgCAKAEAiBIAgCgBAIgSAIAoAQCIEgCAKAEAiBIAgCgBAIgSAIAoAQCIEgCAKAEAiBIAgCgBAIgSAIAoAQCIEgCAKAEAiBIAgCgBAIgSAIAoAQCIEgCAKAEAiBIAgCgBAIgSAIAoAQCIEgCAKAEAiBIAgCgBAIgSAIAoAQCIEgCAKAEAiBIAgCgBAIgSAICovwDJ+r7hD1KQQwAAAABJRU5ErkJggg==">
+<style>
+:root{
+  --paper:#F6F8F6; --card:#FFFFFF; --ink:#141E1A; --dim:#5C6B64;
+  --rule:#D6DED8; --rule2:#EBF0EC;
+  --neg:#0F6B7E; --negbg:#E4F1F4;
+  --pos:#9C2F2F; --posbg:#F8E7E4;
+  --band:#22362C;
+}
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--band);color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  -webkit-text-size-adjust:100%;-webkit-tap-highlight-color:transparent;
+  overscroll-behavior-y:none;
+}
+.mono{font-family:ui-monospace,"SF Mono",Menlo,"Roboto Mono",monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.eyebrow{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--dim);font-weight:600}
+.hide{display:none !important}
+
+/* ---------- shell ---------- */
+#app{min-height:100vh;background:var(--paper);display:flex;flex-direction:column}
+.top{background:var(--band);color:#EAF2ED;padding:calc(env(safe-area-inset-top) + 12px) 14px 0;flex:none}
+.title{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.title h1{margin:0;font-size:15px;font-weight:700;letter-spacing:.14em;text-transform:uppercase}
+.sync{font-size:10.5px;color:#9DBCAC;display:flex;align-items:center;gap:5px;white-space:nowrap}
+.dot{width:6px;height:6px;border-radius:50%;background:#5FD3A0;flex:none}
+.dot.off{background:#B96A6A}
+.dot.wait{background:#E0A94A}
+
+.datebar{display:flex;align-items:center;gap:6px;padding:10px 0 12px}
+.arrow{background:rgba(255,255,255,.1);border:none;color:#EAF2ED;width:34px;height:34px;border-radius:8px;font-size:17px;cursor:pointer;flex:none}
+.arrow:active{background:rgba(255,255,255,.22)}
+.dlab{flex:1;text-align:center;font-size:15px;font-weight:600}
+.dlab small{display:block;font-size:10px;font-weight:400;color:#9DBCAC;letter-spacing:.1em;text-transform:uppercase;margin-top:1px}
+.todaybtn{background:none;border:1px solid rgba(255,255,255,.25);color:#EAF2ED;font-size:10.5px;padding:6px 9px;border-radius:7px;cursor:pointer;flex:none;letter-spacing:.08em;text-transform:uppercase}
+
+.tabs{display:flex;background:var(--band);padding:0 14px;flex:none}
+.tab{flex:1;background:none;border:none;border-bottom:2.5px solid transparent;color:#8FAB9D;padding:10px 4px;font-size:11.5px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;cursor:pointer}
+.tab.on{color:#FFF;border-bottom-color:#5FD3A0}
+
+.body{padding:14px;flex:1;padding-bottom:calc(env(safe-area-inset-bottom) + 24px)}
+
+/* ---------- table ---------- */
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--rule);border-radius:10px;background:var(--card)}
+table.t{border-collapse:separate;border-spacing:0;width:100%;font-size:13px}
+table.t th{position:sticky;top:0;background:#EEF3EF;font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);font-weight:700;padding:8px 9px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--rule)}
+table.t th.l,table.t td.l{text-align:left}
+table.t td{padding:9px;border-bottom:1px solid var(--rule2);white-space:nowrap;vertical-align:middle}
+table.t tr:last-child td{border-bottom:none}
+table.t .stick{position:sticky;left:0;z-index:2;background:var(--card);box-shadow:1px 0 0 var(--rule)}
+table.t th.stick{z-index:3;background:#EEF3EF}
+table.t tbody tr:active td{background:#F2F7F3}
+.bed{font-size:10px;color:var(--dim);letter-spacing:.06em}
+.pname{font-weight:600;font-size:13.5px;line-height:1.2}
+.blank{color:#B7C2BB}
+.bal{display:inline-block;padding:2px 7px;border-radius:5px;font-weight:700;font-size:13px}
+.bal.n{background:var(--negbg);color:var(--neg)}
+.bal.p{background:var(--posbg);color:var(--pos)}
+.bal.z{background:#EEF0EE;color:var(--dim)}
+.spine{width:96px;height:22px;position:relative}
+.spine i{position:absolute;top:0;bottom:0;width:1px;left:50%;background:var(--rule)}
+.spine b{position:absolute;top:5px;height:12px;border-radius:2px}
+
+/* ---------- pieces ---------- */
+.card{background:var(--card);border:1px solid var(--rule);border-radius:10px;padding:14px;margin-bottom:12px}
+.card h3{margin:0 0 10px;font-size:13px;font-weight:700;letter-spacing:.04em}
+.row{display:flex;gap:8px;margin-bottom:9px}
+.f{flex:1;min-width:0}
+.f label{display:block;font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);font-weight:600;margin-bottom:4px}
+.f input{width:100%;padding:11px 10px;border:1px solid var(--rule);border-radius:8px;font-size:16px;background:#FCFDFC;color:var(--ink);font-family:ui-monospace,"SF Mono",Menlo,monospace;font-variant-numeric:tabular-nums}
+.f input.txt{font-family:inherit}
+.f input:focus{outline:2px solid var(--neg);outline-offset:-1px;border-color:var(--neg)}
+.btn{width:100%;padding:13px;border:none;border-radius:9px;background:var(--band);color:#fff;font-size:13.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;font-family:inherit}
+.btn:active{opacity:.82}
+.btn:disabled{background:#B6C2BA;cursor:default}
+.btn.ghost{background:none;color:var(--band);border:1px solid var(--rule);font-weight:600}
+.btn.sm{padding:9px;font-size:11.5px}
+.addrow{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:11px}
+.add{background:var(--band);color:#fff;border:none;border-radius:22px;padding:9px 15px 9px 12px;font-size:12.5px;font-weight:700;letter-spacing:.05em;cursor:pointer;display:flex;align-items:center;gap:6px;flex:none;font-family:inherit}
+.add span{font-size:17px;line-height:1;font-weight:400;margin-top:-1px}
+.pill{display:inline-block;font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;padding:3px 7px;border-radius:20px;background:#EEF3EF;color:var(--dim);font-weight:700}
+.pill.out{background:#F3EEE8;color:#8A6A3E}
+.empty{text-align:center;padding:36px 20px;color:var(--dim);font-size:13.5px;line-height:1.55}
+.empty strong{display:block;color:var(--ink);font-size:15px;margin-bottom:6px}
+.note{font-size:11.5px;color:var(--dim);line-height:1.5;margin-top:8px}
+.err{background:#F8E7E4;border:1px solid #E4C4C0;color:var(--pos);padding:10px 12px;border-radius:9px;font-size:12.5px;margin-bottom:12px;line-height:1.45}
+.ok{background:#E4F1F4;border:1px solid #B9DAE2;color:var(--neg);padding:10px 12px;border-radius:9px;font-size:12.5px;line-height:1.45;margin-bottom:12px}
+.mini{display:flex;gap:8px;margin-bottom:12px}
+.mini>div{flex:1;background:var(--card);border:1px solid var(--rule);border-radius:9px;padding:9px 10px}
+.mini span{display:block;font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);font-weight:600;margin-bottom:3px}
+.mini b{font-size:17px;font-weight:700}
+
+/* ---------- sheets ---------- */
+.sheet{position:fixed;inset:0;background:rgba(20,30,26,.45);z-index:50;display:flex;align-items:flex-end;justify-content:center}
+.sheet>div{background:var(--paper);width:100%;max-width:560px;max-height:92vh;overflow-y:auto;-webkit-overflow-scrolling:touch;border-radius:16px 16px 0 0;padding:16px 14px calc(env(safe-area-inset-bottom) + 26px)}
+.sheet h2{margin:0 0 2px;font-size:17px}
+.sheet .sub{font-size:11.5px;color:var(--dim);margin-bottom:14px}
+
+/* ---------- login ---------- */
+#login{min-height:100vh;background:var(--band);display:flex;flex-direction:column;justify-content:center;padding:26px 20px calc(env(safe-area-inset-bottom) + 26px);color:#EAF2ED}
+#login h1{margin:0 0 4px;font-size:17px;font-weight:700;letter-spacing:.16em;text-transform:uppercase}
+#login p.lead{margin:0 0 26px;font-size:12.5px;color:#9DBCAC;line-height:1.5}
+#login label{display:block;font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:#9DBCAC;font-weight:600;margin-bottom:5px}
+#login input{width:100%;padding:13px 12px;border:1px solid rgba(255,255,255,.18);border-radius:9px;font-size:16px;background:rgba(255,255,255,.07);color:#fff;margin-bottom:13px;font-family:inherit}
+#login input:focus{outline:2px solid #5FD3A0;outline-offset:-1px}
+#login button{width:100%;padding:14px;border:none;border-radius:9px;background:#5FD3A0;color:#11241B;font-size:13.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;font-family:inherit}
+#login button:disabled{opacity:.5}
+#login .msg{font-size:12.5px;line-height:1.45;margin-bottom:14px;padding:10px 12px;border-radius:8px}
+#login .msg.bad{background:rgba(185,106,106,.18);color:#F0BDBD}
+#login .spine-art{height:44px;position:relative;margin-bottom:22px}
+#login .spine-art i{position:absolute;top:0;bottom:0;width:1px;left:50%;background:rgba(255,255,255,.2)}
+#login .spine-art b{position:absolute;height:9px;border-radius:2px}
+
+.toast{position:fixed;bottom:calc(env(safe-area-inset-bottom) + 22px);left:50%;transform:translateX(-50%);background:#22362C;color:#fff;padding:9px 16px;border-radius:20px;font-size:12.5px;letter-spacing:.06em;z-index:60}
+@media (prefers-reduced-motion:no-preference){
+  .fade{animation:f .18s ease-out}
+  @keyframes f{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}
+}
+</style>
+</head>
+<body>
+
+<div id="login" class="hide">
+  <h1>Ward Balance</h1>
+  <p class="lead">Intake, output and blood pressure for the ward. Sign in with the account set up for you.</p>
+  <div class="spine-art">
+    <i></i>
+    <b style="background:#4FC3D9;right:50%;width:22%;top:2px"></b>
+    <b style="background:#E88A7D;left:50%;width:14%;top:17px"></b>
+    <b style="background:#4FC3D9;right:50%;width:34%;top:32px"></b>
+  </div>
+  <div id="loginMsg"></div>
+  <label for="em">Email</label>
+  <input id="em" type="email" autocomplete="username" inputmode="email" autocapitalize="none" spellcheck="false" placeholder="you@hospital.in">
+  <label for="pw">Password</label>
+  <input id="pw" type="password" autocomplete="current-password" placeholder="••••••••">
+  <button id="signin">Sign in</button>
+</div>
+
+<div id="app" class="hide">
+  <div class="top">
+    <div class="title">
+      <h1>Ward Balance</h1>
+      <div class="sync"><span class="dot" id="dot"></span><span id="syncTxt">live</span></div>
+    </div>
+    <div class="datebar">
+      <button class="arrow" id="prev" aria-label="Previous day">&lsaquo;</button>
+      <div class="dlab"><span id="dayLong"></span><small id="dayShort"></small></div>
+      <button class="arrow" id="next" aria-label="Next day">&rsaquo;</button>
+      <button class="todaybtn hide" id="todayBtn">Today</button>
+    </div>
+  </div>
+  <div class="tabs">
+    <button class="tab on" data-tab="chart">Chart</button>
+    <button class="tab" data-tab="ward">Ward</button>
+    <button class="tab" data-tab="you">You</button>
+  </div>
+  <div class="body fade" id="view"></div>
+</div>
+
+<div id="sheets"></div>
+<div id="toast"></div>
+<script type="module">
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4';
+
+/* ==================================================================
+   1. YOUR SETTINGS  —  paste the two values from Supabase here
+   ==================================================================
+   Supabase dashboard → Project Settings → API
+     • Project URL      → SUPABASE_URL
+     • anon public key  → SUPABASE_ANON_KEY
+   ================================================================== */
+
+const SUPABASE_URL      = "PASTE_YOUR_PROJECT_URL_HERE";
+const SUPABASE_ANON_KEY = "PASTE_YOUR_ANON_PUBLIC_KEY_HERE";
+
+/* ================================================================== */
+
+const CONFIGURED = !SUPABASE_URL.startsWith("PASTE") && !SUPABASE_ANON_KEY.startsWith("PASTE");
+const sb = CONFIGURED ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
+
+/* ---------------- helpers ---------------- */
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const todayISO = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; };
+const fmtDMY = (iso) => { if(!iso) return ''; const [y,m,d] = iso.split('-'); return `${d}-${m}-${y}`; };
+const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const MONS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const fmtLong = (iso) => { const [y,m,d] = iso.split('-').map(Number); return `${DAYS[new Date(y,m-1,d).getDay()]} ${d} ${MONS[m-1]}`; };
+const shiftDate = (iso,n) => { const [y,m,d]=iso.split('-').map(Number); const dt=new Date(y,m-1,d); dt.setDate(dt.getDate()+n);
+  return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`; };
+const numOrNull = (v) => { if(v===''||v===null||v===undefined) return null; const n=Number(v); return Number.isFinite(n)?n:null; };
+const signed = (n) => n>0 ? `+${n}` : `${n}`;
+
+const dayBalance = (r) => {
+  if(!r) return null;
+  if(r.intake===null && r.output===null) return null;
+  return (r.intake||0) - (r.output||0);
+};
+
+const cumulativeTo = (pid, iso) => {
+  const rs = (S.readings[pid] || {});
+  let total = null;
+  for(const d of Object.keys(rs).sort()){
+    if(d > iso) continue;
+    const b = dayBalance(rs[d]);
+    if(b !== null) total = (total||0) + b;
+  }
+  return total;
+};
+
+/* ---------------- state ---------------- */
+const S = {
+  session: null,
+  email: '',
+  date: todayISO(),
+  tab: 'chart',
+  patients: [],
+  readings: {},        // patientId -> { 'YYYY-MM-DD': reading }
+  loading: true,
+  live: false,
+  err: '',
+};
+
+const toast = (m) => {
+  $('toast').innerHTML = `<div class="toast">${esc(m)}</div>`;
+  setTimeout(()=>{ $('toast').innerHTML=''; }, 1800);
+};
+
+/* ---------------- data ---------------- */
+async function fetchAll(){
+  const [p, r] = await Promise.all([
+    sb.from('patients').select('*'),
+    sb.from('readings').select('*'),
+  ]);
+  if(p.error || r.error){
+    S.err = (p.error || r.error).message;
+    render();
+    return;
+  }
+  S.err = '';
+  S.patients = (p.data || []).sort(sortPt);
+  const map = {};
+  for(const row of (r.data || [])){
+    (map[row.patient_id] ||= {})[row.day] = row;
+  }
+  S.readings = map;
+  S.loading = false;
+  render();
+}
+
+function sortPt(a,b){
+  if(a.active !== b.active) return a.active ? -1 : 1;
+  const ab=(a.bed||'').padStart(6,'0'), bb=(b.bed||'').padStart(6,'0');
+  return ab.localeCompare(bb) || (a.name||'').localeCompare(b.name||'');
+}
+
+async function saveReading(pid, day, vals){
+  const clean = {
+    patient_id: pid, day,
+    sys: numOrNull(vals.sys), dia: numOrNull(vals.dia),
+    intake: numOrNull(vals.intake), output: numOrNull(vals.output),
+    weight: numOrNull(vals.weight),
+    entered_by: S.email,
+    updated_at: new Date().toISOString(),
+  };
+  const blank = ['sys','dia','intake','output','weight'].every(k => clean[k] === null);
+  if(blank){
+    const { error } = await sb.from('readings').delete().eq('patient_id',pid).eq('day',day);
+    if(error){ toast('Could not save'); return false; }
+    if(S.readings[pid]) delete S.readings[pid][day];
+  } else {
+    const { data, error } = await sb.from('readings')
+      .upsert(clean, { onConflict: 'patient_id,day' }).select().single();
+    if(error){ toast(error.message); return false; }
+    (S.readings[pid] ||= {})[day] = data;
+  }
+  render();
+  return true;
+}
+
+async function savePatient(p){
+  const { data, error } = await sb.from('patients').upsert(p).select().single();
+  if(error){ toast(error.message); return null; }
+  const i = S.patients.findIndex(x => x.id === data.id);
+  if(i >= 0) S.patients[i] = data; else S.patients.push(data);
+  S.patients.sort(sortPt);
+  render();
+  return data;
+}
+
+/* ---------------- auth ---------------- */
+async function doSignIn(){
+  const email = $('em').value.trim(), pw = $('pw').value;
+  if(!email || !pw){ loginMsg('Enter your email and password.','bad'); return; }
+  $('signin').disabled = true; $('signin').textContent = 'Signing in…';
+  const { error } = await sb.auth.signInWithPassword({ email, password: pw });
+  $('signin').disabled = false; $('signin').textContent = 'Sign in';
+  if(error) loginMsg(error.message, 'bad');
+}
+
+function loginMsg(t, kind){
+  $('loginMsg').innerHTML = t ? `<div class="msg ${kind||''}">${esc(t)}</div>` : '';
+}
+
+async function boot(){
+  if(!CONFIGURED){
+    document.body.innerHTML = `<div id="login"><h1>Ward Balance</h1>
+      <p class="lead">Not set up yet. Open <b>index.html</b>, find the settings block near the top of the script,
+      and paste in your Supabase project URL and anon public key.</p></div>`;
+    $('login').classList.remove('hide');
+    return;
+  }
+  const { data } = await sb.auth.getSession();
+  applySession(data.session);
+  sb.auth.onAuthStateChange((_e, s) => applySession(s));
+}
+
+function applySession(session){
+  S.session = session;
+  if(session){
+    S.email = session.user.email;
+    $('login').classList.add('hide');
+    $('app').classList.remove('hide');
+    fetchAll();
+    subscribe();
+  } else {
+    $('app').classList.add('hide');
+    $('login').classList.remove('hide');
+    loginMsg('');
+  }
+}
+
+let channel = null;
+function subscribe(){
+  if(channel) return;
+  channel = sb.channel('ward')
+    .on('postgres_changes', { event:'*', schema:'public', table:'patients' }, fetchAll)
+    .on('postgres_changes', { event:'*', schema:'public', table:'readings' }, fetchAll)
+    .subscribe((status) => {
+      S.live = status === 'SUBSCRIBED';
+      paintSync();
+    });
+}
+
+function paintSync(){
+  $('dot').className = 'dot' + (S.err ? ' off' : S.live ? '' : ' wait');
+  $('syncTxt').textContent = S.err ? 'error' : S.live ? 'live' : 'connecting';
+}
+
+/* ---------------- render ---------------- */
+function render(){
+  paintSync();
+  $('dayLong').textContent  = fmtLong(S.date);
+  $('dayShort').textContent = fmtDMY(S.date);
+  $('todayBtn').classList.toggle('hide', S.date === todayISO());
+  document.querySelectorAll('.tab').forEach(b => b.classList.toggle('on', b.dataset.tab === S.tab));
+  const v = $('view');
+  v.innerHTML = (S.err ? `<div class="err">${esc(S.err)}</div>` : '')
+    + (S.tab === 'chart' ? viewChart() : S.tab === 'ward' ? viewWard() : viewYou());
+  wire();
+}
+
+function spine(value, scale){
+  if(value === null || !scale) return `<div class="spine"><i></i></div>`;
+  const frac = Math.min(Math.abs(value)/scale, 1);
+  const w = Math.max(frac*47, value === 0 ? 0 : 2);
+  const neg = value < 0;
+  return `<div class="spine"><i></i><b style="background:var(--${neg?'neg':'pos'});${neg?'right:50%':'left:50%'};width:${w}%"></b></div>`;
+}
+
+function shownPatients(){
+  return S.patients.filter(p => p.active && p.admitted <= S.date);
+}
+
+function viewChart(){
+  const list = shownPatients();
+  const head = `<div class="addrow">
+      <span class="eyebrow">${list.length} patient${list.length===1?'':'s'} in ward</span>
+      <button class="add" data-act="admit"><span>+</span> Add patient</button>
+    </div>`;
+
+  if(S.loading) return head + `<div class="empty">Loading the ward…</div>`;
+  if(!list.length) return head + `<div class="empty"><strong>No patients yet</strong>
+    Tap <b>+ Add patient</b> above to admit someone. Their chart starts from the admission date you set.</div>`;
+
+  const scale = Math.max(500, ...list.map(p => Math.abs(dayBalance((S.readings[p.id]||{})[S.date]) ?? 0)));
+
+  const rows = list.map(p => {
+    const r = (S.readings[p.id]||{})[S.date];
+    const b = dayBalance(r), c = cumulativeTo(p.id, S.date);
+    const bp = r && r.sys && r.dia ? `${r.sys}/${r.dia}` : `<span class="blank">—</span>`;
+    const cc = c===null ? '' : (c<0 ? 'var(--neg)' : c>0 ? 'var(--pos)' : '');
+    return `<tr data-open="${p.id}">
+      <td class="l stick">${p.bed?`<div class="bed mono">BED ${esc(p.bed)}</div>`:''}<div class="pname">${esc(p.name)}</div></td>
+      <td class="mono">${bp}</td>
+      <td class="mono">${r&&r.intake!==null?r.intake:'<span class="blank">—</span>'}</td>
+      <td class="mono">${r&&r.output!==null?r.output:'<span class="blank">—</span>'}</td>
+      <td class="mono">${b===null?'<span class="blank">—</span>':`<span class="bal ${b<0?'n':b>0?'p':'z'}">${signed(b)}</span>`}</td>
+      <td>${spine(b, scale)}</td>
+      <td class="mono" style="font-weight:700;color:${cc}">${c===null?'<span class="blank">—</span>':signed(c)}</td>
+    </tr>`;
+  }).join('');
+
+  return head + `<div class="scroll"><table class="t">
+      <thead><tr>
+        <th class="l stick">Patient</th><th>BP</th><th>In</th><th>Out</th><th>24 h</th><th class="l"></th><th>Cumulative</th>
+      </tr></thead><tbody>${rows}</tbody></table></div>
+    <div class="note">All volumes in ml. Tap any row to enter or edit that patient's readings. Blue is negative balance, red is positive.</div>
+    <div class="row" style="margin-top:12px">
+      <button class="btn ghost sm" data-act="refresh">Refresh</button>
+      <button class="btn ghost sm" data-act="copy">Copy day as text</button>
+    </div>`;
+}
+
+function viewWard(){
+  if(!S.patients.length) return `<button class="btn" data-act="admit">Admit a patient</button>
+    <div style="height:14px"></div>
+    <div class="empty"><strong>The ward is empty</strong>Admit your first patient and their chart starts from the admission date.</div>`;
+
+  return `<button class="btn" data-act="admit">Admit a patient</button><div style="height:14px"></div>` +
+    S.patients.map(p => {
+      const days = Object.keys(S.readings[p.id]||{}).length;
+      const c = cumulativeTo(p.id, S.date);
+      return `<div class="card" style="opacity:${p.active?1:.62}">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
+          <div style="min-width:0">
+            <div style="font-weight:700;font-size:15px">${esc(p.name)}</div>
+            <div class="note" style="margin-top:3px">${p.bed?`Bed ${esc(p.bed)} · `:''}Admitted ${fmtDMY(p.admitted)} · ${days} day${days===1?'':'s'} charted${c!==null?` · cumulative ${signed(c)} ml`:''}</div>
+          </div>
+          <span class="pill ${p.active?'':'out'}">${p.active?'In ward':'Discharged'}</span>
+        </div>
+        <div class="row" style="margin-top:11px;margin-bottom:0">
+          <button class="btn ghost sm" data-hist="${p.id}">Full chart</button>
+          <button class="btn ghost sm" data-toggle="${p.id}">${p.active?'Discharge':'Re-admit'}</button>
+        </div>
+      </div>`;
+    }).join('');
+}
+
+function viewYou(){
+  return `<div class="card">
+      <h3>Signed in</h3>
+      <div class="note" style="margin-top:0">${esc(S.email)}</div>
+      <div class="note">Your email is stamped on every reading you save, and every change is kept in an audit log that nobody can edit or delete.</div>
+      <div class="row" style="margin-top:11px;margin-bottom:0"><button class="btn ghost sm" data-act="signout">Sign out</button></div>
+    </div>
+    <div class="card">
+      <h3>Install on your phone</h3>
+      <div class="note" style="margin-top:0">In Safari, tap the Share button, then <b>Add to Home Screen</b>. It opens full screen with its own icon, like any other app.</div>
+    </div>
+    <div class="card">
+      <h3>Ward</h3>
+      <div class="note" style="margin-top:0">${S.patients.length} patient record${S.patients.length===1?'':'s'} on file, including discharged. Changes from other staff appear here the moment they are saved.</div>
+    </div>`;
+}
+
+/* ---------------- sheets ---------------- */
+function closeSheet(){ $('sheets').innerHTML = ''; }
+
+function openEntry(pid){
+  const p = S.patients.find(x => x.id === pid); if(!p) return;
+  const r = (S.readings[pid]||{})[S.date] || {};
+  const val = (k) => r[k] === null || r[k] === undefined ? '' : r[k];
+
+  $('sheets').innerHTML = `<div class="sheet" data-close="1"><div>
+    <h2>${esc(p.name)}</h2>
+    <div class="sub">${p.bed?`Bed ${esc(p.bed)} · `:''}Admitted ${fmtDMY(p.admitted)} · Reading for ${fmtDMY(S.date)}</div>
+    <div class="card"><h3>Blood pressure</h3>
+      <div class="row" style="margin-bottom:0">
+        <div class="f"><label>Systolic</label><input id="i_sys" inputmode="numeric" value="${val('sys')}" placeholder="—"></div>
+        <div class="f"><label>Diastolic</label><input id="i_dia" inputmode="numeric" value="${val('dia')}" placeholder="—"></div>
+      </div>
+    </div>
+    <div class="card"><h3>Last 24 hours</h3>
+      <div class="row">
+        <div class="f"><label>Intake ml</label><input id="i_in" inputmode="numeric" value="${val('intake')}" placeholder="—"></div>
+        <div class="f"><label>Output ml</label><input id="i_out" inputmode="numeric" value="${val('output')}" placeholder="—"></div>
+      </div>
+      <div class="row"><div class="f"><label>Weight kg (optional)</label><input id="i_wt" inputmode="decimal" value="${val('weight')}" placeholder="—"></div></div>
+      <div class="mini" style="margin-bottom:0">
+        <div><span>Balance today</span><b class="mono" id="liveBal">—</b></div>
+        <div><span>Cumulative</span><b class="mono" id="liveCum">—</b></div>
+      </div>
+    </div>
+    ${r.entered_by?`<div class="note" style="margin-top:-4px;margin-bottom:10px">Last entered by ${esc(r.entered_by)}.</div>`:''}
+    <button class="btn" id="saveEntry">Save reading</button>
+    <div class="row" style="margin-top:9px;margin-bottom:0">
+      <button class="btn ghost sm" data-hist="${pid}">Full chart</button>
+      <button class="btn ghost sm" data-close="1">Close</button>
+    </div>
+  </div></div>`;
+
+  const recalc = () => {
+    const i = numOrNull($('i_in').value), o = numOrNull($('i_out').value);
+    const b = (i===null && o===null) ? null : (i||0)-(o||0);
+    $('liveBal').textContent = b===null ? '—' : `${signed(b)} ml`;
+    $('liveBal').style.color = b===null ? '' : b<0 ? 'var(--neg)' : b>0 ? 'var(--pos)' : '';
+    // cumulative with this day's pending value swapped in
+    const rs = { ...(S.readings[pid]||{}) };
+    rs[S.date] = { intake:i, output:o };
+    let total = null;
+    for(const d of Object.keys(rs).sort()){
+      if(d > S.date) continue;
+      const bb = dayBalance(rs[d]);
+      if(bb !== null) total = (total||0) + bb;
+    }
+    $('liveCum').textContent = total===null ? '—' : `${signed(total)} ml`;
+  };
+  ['i_in','i_out'].forEach(id => $(id).addEventListener('input', recalc));
+  recalc();
+
+  $('saveEntry').onclick = async () => {
+    const btn = $('saveEntry'); btn.disabled = true; btn.textContent = 'Saving…';
+    const ok = await saveReading(pid, S.date, {
+      sys:$('i_sys').value, dia:$('i_dia').value,
+      intake:$('i_in').value, output:$('i_out').value, weight:$('i_wt').value,
+    });
+    if(ok){ closeSheet(); toast('Saved'); }
+    else { btn.disabled = false; btn.textContent = 'Save reading'; }
+  };
+}
+
+function openHistory(pid){
+  const p = S.patients.find(x => x.id === pid); if(!p) return;
+  const rs = S.readings[pid] || {};
+  const dates = Object.keys(rs).sort();
+  let run = null;
+
+  const rows = dates.map(d => {
+    const r = rs[d], b = dayBalance(r);
+    if(b !== null) run = (run||0) + b;
+    const cc = run===null ? '' : (run<0?'var(--neg)':run>0?'var(--pos)':'');
+    return `<tr>
+      <td class="l stick mono" style="font-size:12px">${fmtDMY(d)}</td>
+      <td class="mono">${r.sys&&r.dia?`${r.sys}/${r.dia}`:'<span class="blank">—</span>'}</td>
+      <td class="mono">${r.weight!==null?r.weight:'<span class="blank">—</span>'}</td>
+      <td class="mono">${r.intake!==null?r.intake:'<span class="blank">—</span>'}</td>
+      <td class="mono">${r.output!==null?r.output:'<span class="blank">—</span>'}</td>
+      <td class="mono">${b===null?'<span class="blank">—</span>':`<span class="bal ${b<0?'n':b>0?'p':'z'}">${signed(b)}</span>`}</td>
+      <td class="mono" style="font-weight:700;color:${cc}">${run===null?'<span class="blank">—</span>':signed(run)}</td>
+    </tr>`;
+  }).join('');
+
+  $('sheets').innerHTML = `<div class="sheet" data-close="1"><div>
+    <h2>${esc(p.name)}</h2>
+    <div class="sub">${p.bed?`Bed ${esc(p.bed)} · `:''}Admitted ${fmtDMY(p.admitted)} · ${dates.length} charted day${dates.length===1?'':'s'}</div>
+    ${dates.length ? `<div class="scroll"><table class="t"><thead><tr>
+        <th class="l stick">Date</th><th>BP</th><th>Wt</th><th>In</th><th>Out</th><th>24 h</th><th>Cumulative</th>
+      </tr></thead><tbody>${rows}</tbody></table></div>`
+      : `<div class="empty"><strong>Nothing charted yet</strong>Readings will appear here once they are entered.</div>`}
+    <button class="btn ghost" style="margin-top:12px" data-close="1">Close</button>
+  </div></div>`;
+}
+
+function openAdmit(){
+  $('sheets').innerHTML = `<div class="sheet" data-close="1"><div>
+    <h2>Admit a patient</h2>
+    <div class="sub">The cumulative balance is counted from the admission date.</div>
+    <div class="card">
+      <div class="row">
+        <div class="f" style="flex:2"><label>Name or identifier</label><input class="txt" id="a_name" placeholder="e.g. Anita S."></div>
+        <div class="f"><label>Bed</label><input class="txt" id="a_bed" placeholder="838"></div>
+      </div>
+      <div class="row" style="margin-bottom:0">
+        <div class="f"><label>Admission date</label><input id="a_date" type="date" value="${todayISO()}"></div>
+      </div>
+    </div>
+    <button class="btn" id="doAdmit">Admit</button>
+    <button class="btn ghost" style="margin-top:9px" data-close="1">Cancel</button>
+  </div></div>`;
+
+  $('a_name').focus();
+  $('doAdmit').onclick = async () => {
+    const name = $('a_name').value.trim();
+    if(!name){ $('a_name').focus(); return; }
+    const btn = $('doAdmit'); btn.disabled = true; btn.textContent = 'Admitting…';
+    const p = await savePatient({
+      name, bed: $('a_bed').value.trim() || null,
+      admitted: $('a_date').value || todayISO(),
+      active: true, created_by: S.email,
+    });
+    if(p){ closeSheet(); toast('Admitted'); }
+    else { btn.disabled = false; btn.textContent = 'Admit'; }
+  };
+}
+
+function copyDay(){
+  const list = shownPatients();
+  const lines = [`Ward fluid balance — ${fmtDMY(S.date)}`, ''];
+  for(const p of list){
+    const r = (S.readings[p.id]||{})[S.date] || {};
+    const b = dayBalance(r), c = cumulativeTo(p.id, S.date);
+    const bp = r.sys && r.dia ? `${r.sys}/${r.dia}` : '—';
+    lines.push(
+      `${p.bed ? p.bed+' · ' : ''}${p.name}`,
+      `  BP ${bp} | In ${r.intake ?? '—'} | Out ${r.output ?? '—'}`,
+      `  24h ${b===null?'—':signed(b)+' ml'} | Cum ${c===null?'—':signed(c)+' ml'}`,
+      ''
+    );
+  }
+  const txt = lines.join('\n');
+  if(navigator.clipboard) navigator.clipboard.writeText(txt).then(()=>toast('Copied'), ()=>toast('Copy failed'));
+}
+
+/* ---------------- events ---------------- */
+function wire(){
+  $('view').querySelectorAll('[data-open]').forEach(el => el.onclick = () => openEntry(el.dataset.open));
+  $('view').querySelectorAll('[data-hist]').forEach(el => el.onclick = (e) => { e.stopPropagation(); openHistory(el.dataset.hist); });
+  $('view').querySelectorAll('[data-toggle]').forEach(el => el.onclick = async () => {
+    const p = S.patients.find(x => x.id === el.dataset.toggle);
+    if(p) await savePatient({ ...p, active: !p.active });
+  });
+  $('view').querySelectorAll('[data-act]').forEach(el => el.onclick = async () => {
+    const a = el.dataset.act;
+    if(a === 'admit')   openAdmit();
+    if(a === 'refresh') { await fetchAll(); toast('Refreshed'); }
+    if(a === 'copy')    copyDay();
+    if(a === 'signout') { await sb.auth.signOut(); channel = null; }
+  });
+}
+
+document.addEventListener('click', (e) => {
+  const t = e.target.closest('[data-close]');
+  if(t && (t.dataset.close === '1') && (t === e.target || t.classList.contains('sheet') || t.tagName === 'BUTTON')) closeSheet();
+  const h = e.target.closest('[data-hist]');
+  if(h && $('sheets').contains(h)) openHistory(h.dataset.hist);
+});
+
+document.querySelectorAll('.tab').forEach(b => b.onclick = () => { S.tab = b.dataset.tab; render(); });
+$('prev').onclick     = () => { S.date = shiftDate(S.date,-1); render(); };
+$('next').onclick     = () => { S.date = shiftDate(S.date, 1); render(); };
+$('todayBtn').onclick = () => { S.date = todayISO(); render(); };
+$('signin').onclick   = doSignIn;
+$('pw').addEventListener('keydown', (e) => { if(e.key === 'Enter') doSignIn(); });
+
+document.addEventListener('visibilitychange', () => { if(!document.hidden && S.session) fetchAll(); });
+
+boot();
+</script>
+</body>
+</html>
