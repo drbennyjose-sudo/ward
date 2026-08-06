@@ -106,6 +106,20 @@ table.t tbody tr:active td{background:#F2F7F3}
 .mini span{display:block;font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);font-weight:600;margin-bottom:3px}
 .mini b{font-size:17px;font-weight:700}
 
+/* ---------- entry list ---------- */
+.elist{margin-bottom:12px}
+.eitem{background:var(--card);border:1px solid var(--rule);border-radius:9px;padding:10px 11px;margin-bottom:7px;display:flex;align-items:center;gap:11px;cursor:pointer}
+.eitem:active{background:#F2F7F3}
+.eitem.on{border-color:var(--neg);outline:1px solid var(--neg)}
+.etime{font-size:11.5px;color:var(--dim);font-weight:700;flex:none;width:52px;font-family:ui-monospace,"SF Mono",Menlo,monospace}
+.evals{flex:1;min-width:0;font-size:13px;line-height:1.35}
+.evals em{font-style:normal;color:var(--dim);font-size:10px;letter-spacing:.08em;text-transform:uppercase;font-weight:700;margin-right:3px}
+.eby{font-size:10.5px;color:var(--dim);margin-top:2px}
+.echev{color:#B7C2BB;font-size:15px;flex:none}
+.daybar{display:flex;align-items:baseline;justify-content:space-between;margin:0 0 8px}
+.daybar b{font-size:12px}
+
+
 /* ---------- sheets ---------- */
 .sheet{position:fixed;inset:0;background:rgba(20,30,26,.45);z-index:50;display:flex;align-items:flex-end;justify-content:center}
 .sheet>div{background:var(--paper);width:100%;max-width:560px;max-height:92vh;overflow-y:auto;-webkit-overflow-scrolling:touch;border-radius:16px 16px 0 0;padding:16px 14px calc(env(safe-area-inset-bottom) + 26px)}
@@ -189,50 +203,46 @@ const CFG = window.WARD_CONFIG || {};
 const SUPABASE_URL      = CFG.url || "";
 const SUPABASE_ANON_KEY = CFG.key || "";
 
+/* The charting day runs 08:00 to 08:00. An entry recorded at 06:00 on
+   the 6th belongs to the charting day of the 5th. */
+const DAY_START_HOUR = 8;
+
 const CONFIGURED = SUPABASE_URL.startsWith("http") && SUPABASE_ANON_KEY.length > 20;
 const sb = CONFIGURED ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
 
 /* ---------------- helpers ---------------- */
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const todayISO = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; };
+
+const isoOf = (d) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+
+/* which charting day does this moment fall in */
+const chartDayOf = (d) => { const x = new Date(d.getTime()); x.setHours(x.getHours() - DAY_START_HOUR); return isoOf(x); };
+const currentChartDay = () => chartDayOf(new Date());
+
 const fmtDMY = (iso) => { if(!iso) return ''; const [y,m,d] = iso.split('-'); return `${d}-${m}-${y}`; };
 const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 const MONS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const fmtLong = (iso) => { const [y,m,d] = iso.split('-').map(Number); return `${DAYS[new Date(y,m-1,d).getDay()]} ${d} ${MONS[m-1]}`; };
-const shiftDate = (iso,n) => { const [y,m,d]=iso.split('-').map(Number); const dt=new Date(y,m-1,d); dt.setDate(dt.getDate()+n);
-  return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`; };
+const shiftDate = (iso,n) => { const [y,m,d]=iso.split('-').map(Number); const dt=new Date(y,m-1,d); dt.setDate(dt.getDate()+n); return isoOf(dt); };
+const fmtTime = (ts) => { const d = new Date(ts); return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; };
+
 const numOrNull = (v) => { if(v===''||v===null||v===undefined) return null; const n=Number(v); return Number.isFinite(n)?n:null; };
 const signed = (n) => n>0 ? `+${n}` : `${n}`;
-
-const dayBalance = (r) => {
-  if(!r) return null;
-  if(r.intake===null && r.output===null) return null;
-  return (r.intake||0) - (r.output||0);
-};
-
-const cumulativeTo = (pid, iso) => {
-  const rs = (S.readings[pid] || {});
-  let total = null;
-  for(const d of Object.keys(rs).sort()){
-    if(d > iso) continue;
-    const b = dayBalance(rs[d]);
-    if(b !== null) total = (total||0) + b;
-  }
-  return total;
-};
 
 /* ---------------- state ---------------- */
 const S = {
   session: null,
   email: '',
-  date: todayISO(),
+  date: currentChartDay(),
   tab: 'chart',
   patients: [],
-  readings: {},        // patientId -> { 'YYYY-MM-DD': reading }
+  entries: {},          // patientId -> [entry, ...] sorted by time
   loading: true,
   live: false,
   err: '',
+  editing: null,        // entry id being edited inside the sheet
+  openPid: null,        // patient whose sheet is open
 };
 
 const toast = (m) => {
@@ -240,26 +250,52 @@ const toast = (m) => {
   setTimeout(()=>{ $('toast').innerHTML=''; }, 1800);
 };
 
+/* ---------------- aggregation ---------------- */
+
+const entriesFor = (pid, day) =>
+  (S.entries[pid] || []).filter(e => e.chart_day === day).sort((a,b) => a.at.localeCompare(b.at));
+
+/* summed intake / output for one charting day */
+function dayTotals(pid, day){
+  const list = entriesFor(pid, day);
+  let intake = null, output = null, bp = null, weight = null;
+  for(const e of list){
+    if(e.intake !== null) intake = (intake || 0) + e.intake;
+    if(e.output !== null) output = (output || 0) + e.output;
+    if(e.sys !== null && e.dia !== null) bp = e;      // latest wins
+    if(e.weight !== null) weight = e.weight;
+  }
+  const balance = (intake === null && output === null) ? null : (intake||0) - (output||0);
+  return { intake, output, balance, bp, weight, count: list.length };
+}
+
+/* running total from admission through this charting day */
+function cumulativeTo(pid, day){
+  const days = new Set((S.entries[pid] || []).map(e => e.chart_day));
+  let total = null;
+  for(const d of [...days].sort()){
+    if(d > day) continue;
+    const b = dayTotals(pid, d).balance;
+    if(b !== null) total = (total || 0) + b;
+  }
+  return total;
+}
+
 /* ---------------- data ---------------- */
 async function fetchAll(){
-  const [p, r] = await Promise.all([
+  const [p, e] = await Promise.all([
     sb.from('patients').select('*'),
-    sb.from('readings').select('*'),
+    sb.from('entries').select('*').order('at', { ascending: true }),
   ]);
-  if(p.error || r.error){
-    S.err = (p.error || r.error).message;
-    render();
-    return;
-  }
+  if(p.error || e.error){ S.err = (p.error || e.error).message; render(); return; }
   S.err = '';
   S.patients = (p.data || []).sort(sortPt);
   const map = {};
-  for(const row of (r.data || [])){
-    (map[row.patient_id] ||= {})[row.day] = row;
-  }
-  S.readings = map;
+  for(const row of (e.data || [])) (map[row.patient_id] ||= []).push(row);
+  S.entries = map;
   S.loading = false;
   render();
+  if(S.openPid) paintSheet();
 }
 
 function sortPt(a,b){
@@ -268,27 +304,57 @@ function sortPt(a,b){
   return ab.localeCompare(bb) || (a.name||'').localeCompare(b.name||'');
 }
 
-async function saveReading(pid, day, vals){
-  const clean = {
-    patient_id: pid, day,
+function localAdd(row){
+  const list = (S.entries[row.patient_id] ||= []);
+  const i = list.findIndex(x => x.id === row.id);
+  if(i >= 0) list[i] = row; else list.push(row);
+  list.sort((a,b) => a.at.localeCompare(b.at));
+}
+
+async function addEntry(pid, day, vals){
+  const row = {
+    patient_id: pid,
+    chart_day: day,
+    at: new Date().toISOString(),
     sys: numOrNull(vals.sys), dia: numOrNull(vals.dia),
     intake: numOrNull(vals.intake), output: numOrNull(vals.output),
     weight: numOrNull(vals.weight),
     entered_by: S.email,
-    updated_at: new Date().toISOString(),
   };
-  const blank = ['sys','dia','intake','output','weight'].every(k => clean[k] === null);
-  if(blank){
-    const { error } = await sb.from('readings').delete().eq('patient_id',pid).eq('day',day);
-    if(error){ toast('Could not save'); return false; }
-    if(S.readings[pid]) delete S.readings[pid][day];
-  } else {
-    const { data, error } = await sb.from('readings')
-      .upsert(clean, { onConflict: 'patient_id,day' }).select().single();
-    if(error){ toast(error.message); return false; }
-    (S.readings[pid] ||= {})[day] = data;
+  if(['sys','dia','intake','output','weight'].every(k => row[k] === null)){
+    toast('Nothing to save'); return false;
   }
-  render();
+  const { data, error } = await sb.from('entries').insert(row).select().single();
+  if(error){ toast(error.message); return false; }
+  localAdd(data);
+  render(); paintSheet();
+  return true;
+}
+
+async function updateEntry(id, vals){
+  const patch = {
+    sys: numOrNull(vals.sys), dia: numOrNull(vals.dia),
+    intake: numOrNull(vals.intake), output: numOrNull(vals.output),
+    weight: numOrNull(vals.weight),
+    edited_by: S.email, edited_at: new Date().toISOString(),
+  };
+  if(['sys','dia','intake','output','weight'].every(k => patch[k] === null)){
+    toast('Nothing left — delete it instead'); return false;
+  }
+  const { data, error } = await sb.from('entries').update(patch).eq('id', id).select().single();
+  if(error){ toast(error.message); return false; }
+  localAdd(data);
+  S.editing = null;
+  render(); paintSheet();
+  return true;
+}
+
+async function deleteEntry(id, pid){
+  const { error } = await sb.from('entries').delete().eq('id', id);
+  if(error){ toast(error.message); return false; }
+  S.entries[pid] = (S.entries[pid] || []).filter(e => e.id !== id);
+  S.editing = null;
+  render(); paintSheet();
   return true;
 }
 
@@ -306,7 +372,7 @@ async function deletePatient(pid){
   const { error } = await sb.from('patients').delete().eq('id', pid);
   if(error){ toast(error.message); return false; }
   S.patients = S.patients.filter(p => p.id !== pid);
-  delete S.readings[pid];
+  delete S.entries[pid];
   render();
   return true;
 }
@@ -358,11 +424,8 @@ function subscribe(){
   if(channel) return;
   channel = sb.channel('ward')
     .on('postgres_changes', { event:'*', schema:'public', table:'patients' }, fetchAll)
-    .on('postgres_changes', { event:'*', schema:'public', table:'readings' }, fetchAll)
-    .subscribe((status) => {
-      S.live = status === 'SUBSCRIBED';
-      paintSync();
-    });
+    .on('postgres_changes', { event:'*', schema:'public', table:'entries' },  fetchAll)
+    .subscribe((status) => { S.live = status === 'SUBSCRIBED'; paintSync(); });
 }
 
 function paintSync(){
@@ -374,8 +437,8 @@ function paintSync(){
 function render(){
   paintSync();
   $('dayLong').textContent  = fmtLong(S.date);
-  $('dayShort').textContent = fmtDMY(S.date);
-  $('todayBtn').classList.toggle('hide', S.date === todayISO());
+  $('dayShort').textContent = `${fmtDMY(S.date)} · 08:00 → 08:00`;
+  $('todayBtn').classList.toggle('hide', S.date === currentChartDay());
   document.querySelectorAll('.tab').forEach(b => b.classList.toggle('on', b.dataset.tab === S.tab));
   const v = $('view');
   v.innerHTML = (S.err ? `<div class="err">${esc(S.err)}</div>` : '')
@@ -391,9 +454,7 @@ function spine(value, scale){
   return `<div class="spine"><i></i><b style="background:var(--${neg?'neg':'pos'});${neg?'right:50%':'left:50%'};width:${w}%"></b></div>`;
 }
 
-function shownPatients(){
-  return S.patients.filter(p => p.active && p.admitted <= S.date);
-}
+const shownPatients = () => S.patients.filter(p => p.active && p.admitted <= S.date);
 
 function viewChart(){
   const list = shownPatients();
@@ -406,29 +467,31 @@ function viewChart(){
   if(!list.length) return head + `<div class="empty"><strong>No patients yet</strong>
     Tap <b>+ Add patient</b> above to admit someone. Their chart starts from the admission date you set.</div>`;
 
-  const scale = Math.max(500, ...list.map(p => Math.abs(dayBalance((S.readings[p.id]||{})[S.date]) ?? 0)));
+  const scale = Math.max(500, ...list.map(p => Math.abs(dayTotals(p.id, S.date).balance ?? 0)));
 
   const rows = list.map(p => {
-    const r = (S.readings[p.id]||{})[S.date];
-    const b = dayBalance(r), c = cumulativeTo(p.id, S.date);
-    const bp = r && r.sys && r.dia ? `${r.sys}/${r.dia}` : `<span class="blank">—</span>`;
+    const t = dayTotals(p.id, S.date);
+    const c = cumulativeTo(p.id, S.date);
+    const bp = t.bp ? `${t.bp.sys}/${t.bp.dia}` : `<span class="blank">—</span>`;
     const cc = c===null ? '' : (c<0 ? 'var(--neg)' : c>0 ? 'var(--pos)' : '');
     return `<tr data-open="${p.id}">
       <td class="l stick">${p.bed?`<div class="bed mono">BED ${esc(p.bed)}</div>`:''}<div class="pname">${esc(p.name)}</div></td>
       <td class="mono">${bp}</td>
-      <td class="mono">${r&&r.intake!==null?r.intake:'<span class="blank">—</span>'}</td>
-      <td class="mono">${r&&r.output!==null?r.output:'<span class="blank">—</span>'}</td>
-      <td class="mono">${b===null?'<span class="blank">—</span>':`<span class="bal ${b<0?'n':b>0?'p':'z'}">${signed(b)}</span>`}</td>
-      <td>${spine(b, scale)}</td>
+      <td class="mono">${t.intake!==null?t.intake:'<span class="blank">—</span>'}</td>
+      <td class="mono">${t.output!==null?t.output:'<span class="blank">—</span>'}</td>
+      <td class="mono">${t.balance===null?'<span class="blank">—</span>':`<span class="bal ${t.balance<0?'n':t.balance>0?'p':'z'}">${signed(t.balance)}</span>`}</td>
+      <td>${spine(t.balance, scale)}</td>
       <td class="mono" style="font-weight:700;color:${cc}">${c===null?'<span class="blank">—</span>':signed(c)}</td>
+      <td class="mono" style="font-size:11px;color:var(--dim)">${t.count||''}</td>
     </tr>`;
   }).join('');
 
   return head + `<div class="scroll"><table class="t">
       <thead><tr>
-        <th class="l stick">Patient</th><th>BP</th><th>In</th><th>Out</th><th>24 h</th><th class="l"></th><th>Cumulative</th>
+        <th class="l stick">Patient</th><th>BP</th><th>In</th><th>Out</th><th>24 h</th><th class="l"></th><th>Cumulative</th><th>Entries</th>
       </tr></thead><tbody>${rows}</tbody></table></div>
-    <div class="note">All volumes in ml. Tap any row to enter or edit that patient's readings. Blue is negative balance, red is positive.</div>
+    <div class="note">All volumes in ml, totalled across every entry made in this 08:00 to 08:00 window.
+      Tap a row to add an entry or review the day's readings. Blue is negative balance, red is positive.</div>
     <div class="row" style="margin-top:12px">
       <button class="btn ghost sm" data-act="refresh">Refresh</button>
       <button class="btn ghost sm" data-act="copy">Copy day as text</button>
@@ -442,13 +505,14 @@ function viewWard(){
 
   return `<button class="btn" data-act="admit">Admit a patient</button><div style="height:14px"></div>` +
     S.patients.map(p => {
-      const days = Object.keys(S.readings[p.id]||{}).length;
+      const days = new Set((S.entries[p.id]||[]).map(e => e.chart_day)).size;
+      const n = (S.entries[p.id]||[]).length;
       const c = cumulativeTo(p.id, S.date);
       return `<div class="card" style="opacity:${p.active?1:.62}">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
           <div style="min-width:0">
             <div style="font-weight:700;font-size:15px">${esc(p.name)}</div>
-            <div class="note" style="margin-top:3px">${p.bed?`Bed ${esc(p.bed)} · `:''}Admitted ${fmtDMY(p.admitted)} · ${days} day${days===1?'':'s'} charted${c!==null?` · cumulative ${signed(c)} ml`:''}</div>
+            <div class="note" style="margin-top:3px">${p.bed?`Bed ${esc(p.bed)} · `:''}Admitted ${fmtDMY(p.admitted)} · ${days} day${days===1?'':'s'}, ${n} entr${n===1?'y':'ies'}${c!==null?` · cumulative ${signed(c)} ml`:''}</div>
           </div>
           <span class="pill ${p.active?'':'out'}">${p.active?'In ward':'Discharged'}</span>
         </div>
@@ -465,8 +529,12 @@ function viewYou(){
   return `<div class="card">
       <h3>Signed in</h3>
       <div class="note" style="margin-top:0">${esc(S.email)}</div>
-      <div class="note">Your email is stamped on every reading you save, and every change is kept in an audit log that nobody can edit or delete.</div>
+      <div class="note">Your email is stamped on every entry you make, and every change is kept in an audit log that nobody can edit or delete.</div>
       <div class="row" style="margin-top:11px;margin-bottom:0"><button class="btn ghost sm" data-act="signout">Sign out</button></div>
+    </div>
+    <div class="card">
+      <h3>The charting day</h3>
+      <div class="note" style="margin-top:0">A day runs from 08:00 to 08:00. An entry made at 06:00 counts towards the previous day's balance, which is what the ward round expects.</div>
     </div>
     <div class="card">
       <h3>Install on your phone</h3>
@@ -478,111 +546,160 @@ function viewYou(){
     </div>`;
 }
 
-/* ---------------- sheets ---------------- */
-function closeSheet(){ $('sheets').innerHTML = ''; }
+/* ---------------- entry sheet ---------------- */
+function closeSheet(){ S.openPid = null; S.editing = null; $('sheets').innerHTML = ''; }
 
 function openEntry(pid){
-  const p = S.patients.find(x => x.id === pid); if(!p) return;
-  const r = (S.readings[pid]||{})[S.date] || {};
-  const val = (k) => r[k] === null || r[k] === undefined ? '' : r[k];
+  S.openPid = pid; S.editing = null;
+  $('sheets').innerHTML = `<div class="sheet" data-close="1"><div id="sheetBody"></div></div>`;
+  paintSheet();
+}
 
-  $('sheets').innerHTML = `<div class="sheet" data-close="1"><div>
+function entryLine(e){
+  const bits = [];
+  if(e.sys !== null && e.dia !== null) bits.push(`<em>BP</em>${e.sys}/${e.dia}`);
+  if(e.intake !== null) bits.push(`<em>In</em>${e.intake}`);
+  if(e.output !== null) bits.push(`<em>Out</em>${e.output}`);
+  if(e.weight !== null) bits.push(`<em>Wt</em>${e.weight}`);
+  return bits.join('&nbsp;&nbsp;');
+}
+
+function paintSheet(){
+  const body = $('sheetBody'); if(!body || !S.openPid) return;
+  const pid = S.openPid;
+  const p = S.patients.find(x => x.id === pid);
+  if(!p){ closeSheet(); return; }
+
+  const list = entriesFor(pid, S.date);
+  const t = dayTotals(pid, S.date);
+  const c = cumulativeTo(pid, S.date);
+  const ed = S.editing ? list.find(e => e.id === S.editing) : null;
+
+  const items = list.length ? list.map(e => `
+    <div class="eitem ${S.editing===e.id?'on':''}" data-entry="${e.id}">
+      <div class="etime">${fmtTime(e.at)}</div>
+      <div class="evals">${entryLine(e)}
+        <div class="eby">${esc(e.entered_by||'')}${e.edited_by?` · edited by ${esc(e.edited_by)}`:''}</div>
+      </div>
+      <div class="echev">${S.editing===e.id?'▾':'›'}</div>
+    </div>`).join('')
+    : `<div class="note" style="margin-bottom:12px">Nothing recorded for this day yet.</div>`;
+
+  const f = (k) => ed && ed[k] !== null && ed[k] !== undefined ? ed[k] : '';
+
+  body.innerHTML = `
     <h2>${esc(p.name)}</h2>
-    <div class="sub">${p.bed?`Bed ${esc(p.bed)} · `:''}Admitted ${fmtDMY(p.admitted)} · Reading for ${fmtDMY(S.date)}</div>
-    <div class="card"><h3>Blood pressure</h3>
-      <div class="row" style="margin-bottom:0">
-        <div class="f"><label>Systolic</label><input id="i_sys" inputmode="numeric" value="${val('sys')}" placeholder="—"></div>
-        <div class="f"><label>Diastolic</label><input id="i_dia" inputmode="numeric" value="${val('dia')}" placeholder="—"></div>
-      </div>
+    <div class="sub">${p.bed?`Bed ${esc(p.bed)} · `:''}Admitted ${fmtDMY(p.admitted)} · ${fmtDMY(S.date)}, 08:00 → 08:00</div>
+
+    <div class="mini">
+      <div><span>Intake</span><b class="mono">${t.intake ?? '—'}</b></div>
+      <div><span>Output</span><b class="mono">${t.output ?? '—'}</b></div>
+      <div><span>Balance</span><b class="mono" style="color:${t.balance===null?'':t.balance<0?'var(--neg)':t.balance>0?'var(--pos)':''}">${t.balance===null?'—':signed(t.balance)}</b></div>
+      <div><span>Cumulative</span><b class="mono" style="color:${c===null?'':c<0?'var(--neg)':c>0?'var(--pos)':''}">${c===null?'—':signed(c)}</b></div>
     </div>
-    <div class="card"><h3>Last 24 hours</h3>
+
+    <div class="daybar"><span class="eyebrow">Entries today</span><b class="mono" style="color:var(--dim)">${list.length}</b></div>
+    <div class="elist">${items}</div>
+
+    <div class="card">
+      <h3>${ed ? `Edit the ${fmtTime(ed.at)} entry` : 'Add an entry'}</h3>
       <div class="row">
-        <div class="f"><label>Intake ml</label><input id="i_in" inputmode="numeric" value="${val('intake')}" placeholder="—"></div>
-        <div class="f"><label>Output ml</label><input id="i_out" inputmode="numeric" value="${val('output')}" placeholder="—"></div>
+        <div class="f"><label>Systolic</label><input id="i_sys" inputmode="numeric" value="${f('sys')}" placeholder="—"></div>
+        <div class="f"><label>Diastolic</label><input id="i_dia" inputmode="numeric" value="${f('dia')}" placeholder="—"></div>
       </div>
-      <div class="row"><div class="f"><label>Weight kg (optional)</label><input id="i_wt" inputmode="decimal" value="${val('weight')}" placeholder="—"></div></div>
-      <div class="mini" style="margin-bottom:0">
-        <div><span>Balance today</span><b class="mono" id="liveBal">—</b></div>
-        <div><span>Cumulative</span><b class="mono" id="liveCum">—</b></div>
+      <div class="row">
+        <div class="f"><label>Intake ml</label><input id="i_in" inputmode="numeric" value="${f('intake')}" placeholder="—"></div>
+        <div class="f"><label>Output ml</label><input id="i_out" inputmode="numeric" value="${f('output')}" placeholder="—"></div>
       </div>
+      <div class="row" style="margin-bottom:0">
+        <div class="f"><label>Weight kg</label><input id="i_wt" inputmode="decimal" value="${f('weight')}" placeholder="—"></div>
+        <div class="f"><label>Time</label><input value="${ed ? fmtTime(ed.at) : 'now'}" disabled style="opacity:.6"></div>
+      </div>
+      <div class="note">${ed ? 'The original time is kept. Your name is recorded against the change.' : 'Fill only what you have. The time is stamped automatically and this adds to the day, it does not replace earlier entries.'}</div>
     </div>
-    ${r.entered_by?`<div class="note" style="margin-top:-4px;margin-bottom:10px">Last entered by ${esc(r.entered_by)}.</div>`:''}
-    <button class="btn" id="saveEntry">Save reading</button>
-    <div class="row" style="margin-top:9px;margin-bottom:0">
-      <button class="btn ghost sm" data-hist="${pid}">Full chart</button>
-      <button class="btn ghost sm" data-close="1">Close</button>
-    </div>
-  </div></div>`;
 
-  const recalc = () => {
-    const i = numOrNull($('i_in').value), o = numOrNull($('i_out').value);
-    const b = (i===null && o===null) ? null : (i||0)-(o||0);
-    $('liveBal').textContent = b===null ? '—' : `${signed(b)} ml`;
-    $('liveBal').style.color = b===null ? '' : b<0 ? 'var(--neg)' : b>0 ? 'var(--pos)' : '';
-    // cumulative with this day's pending value swapped in
-    const rs = { ...(S.readings[pid]||{}) };
-    rs[S.date] = { intake:i, output:o };
-    let total = null;
-    for(const d of Object.keys(rs).sort()){
-      if(d > S.date) continue;
-      const bb = dayBalance(rs[d]);
-      if(bb !== null) total = (total||0) + bb;
-    }
-    $('liveCum').textContent = total===null ? '—' : `${signed(total)} ml`;
+    ${ed
+      ? `<button class="btn" id="doSave">Save changes</button>
+         <div class="row" style="margin-top:9px;margin-bottom:0">
+           <button class="btn ghost sm" id="cancelEdit">Cancel</button>
+           <button class="btn ghost sm danger" id="doDelEntry">Delete entry</button>
+         </div>`
+      : `<button class="btn" id="doAdd">Add entry</button>
+         <div class="row" style="margin-top:9px;margin-bottom:0">
+           <button class="btn ghost sm" data-hist="${pid}">Full chart</button>
+           <button class="btn ghost sm" data-close="1">Close</button>
+         </div>`}
+  `;
+
+  body.querySelectorAll('[data-entry]').forEach(el => el.onclick = () => {
+    S.editing = S.editing === el.dataset.entry ? null : el.dataset.entry;
+    paintSheet();
+  });
+
+  const read = () => ({ sys:$('i_sys').value, dia:$('i_dia').value, intake:$('i_in').value, output:$('i_out').value, weight:$('i_wt').value });
+
+  if($('doAdd')) $('doAdd').onclick = async () => {
+    const b = $('doAdd'); b.disabled = true; b.textContent = 'Saving…';
+    const ok = await addEntry(pid, S.date, read());
+    if(ok) toast('Entry added');
+    else { b.disabled = false; b.textContent = 'Add entry'; }
   };
-  ['i_in','i_out'].forEach(id => $(id).addEventListener('input', recalc));
-  recalc();
-
-  $('saveEntry').onclick = async () => {
-    const btn = $('saveEntry'); btn.disabled = true; btn.textContent = 'Saving…';
-    const ok = await saveReading(pid, S.date, {
-      sys:$('i_sys').value, dia:$('i_dia').value,
-      intake:$('i_in').value, output:$('i_out').value, weight:$('i_wt').value,
-    });
-    if(ok){ closeSheet(); toast('Saved'); }
-    else { btn.disabled = false; btn.textContent = 'Save reading'; }
+  if($('doSave')) $('doSave').onclick = async () => {
+    const b = $('doSave'); b.disabled = true; b.textContent = 'Saving…';
+    const ok = await updateEntry(S.editing, read());
+    if(ok) toast('Updated');
+    else { b.disabled = false; b.textContent = 'Save changes'; }
+  };
+  if($('cancelEdit')) $('cancelEdit').onclick = () => { S.editing = null; paintSheet(); };
+  if($('doDelEntry')) $('doDelEntry').onclick = async () => {
+    const ok = await deleteEntry(S.editing, pid);
+    if(ok) toast('Entry deleted');
   };
 }
 
+/* ---------------- history ---------------- */
 function openHistory(pid){
   const p = S.patients.find(x => x.id === pid); if(!p) return;
-  const rs = S.readings[pid] || {};
-  const dates = Object.keys(rs).sort();
+  S.openPid = null;
+  const days = [...new Set((S.entries[pid]||[]).map(e => e.chart_day))].sort();
   let run = null;
 
-  const rows = dates.map(d => {
-    const r = rs[d], b = dayBalance(r);
-    if(b !== null) run = (run||0) + b;
+  const rows = days.map(d => {
+    const t = dayTotals(pid, d);
+    if(t.balance !== null) run = (run||0) + t.balance;
     const cc = run===null ? '' : (run<0?'var(--neg)':run>0?'var(--pos)':'');
     return `<tr>
       <td class="l stick mono" style="font-size:12px">${fmtDMY(d)}</td>
-      <td class="mono">${r.sys&&r.dia?`${r.sys}/${r.dia}`:'<span class="blank">—</span>'}</td>
-      <td class="mono">${r.weight!==null?r.weight:'<span class="blank">—</span>'}</td>
-      <td class="mono">${r.intake!==null?r.intake:'<span class="blank">—</span>'}</td>
-      <td class="mono">${r.output!==null?r.output:'<span class="blank">—</span>'}</td>
-      <td class="mono">${b===null?'<span class="blank">—</span>':`<span class="bal ${b<0?'n':b>0?'p':'z'}">${signed(b)}</span>`}</td>
+      <td class="mono">${t.bp?`${t.bp.sys}/${t.bp.dia}`:'<span class="blank">—</span>'}</td>
+      <td class="mono">${t.weight ?? '<span class="blank">—</span>'}</td>
+      <td class="mono">${t.intake ?? '<span class="blank">—</span>'}</td>
+      <td class="mono">${t.output ?? '<span class="blank">—</span>'}</td>
+      <td class="mono">${t.balance===null?'<span class="blank">—</span>':`<span class="bal ${t.balance<0?'n':t.balance>0?'p':'z'}">${signed(t.balance)}</span>`}</td>
       <td class="mono" style="font-weight:700;color:${cc}">${run===null?'<span class="blank">—</span>':signed(run)}</td>
+      <td class="mono" style="font-size:11px;color:var(--dim)">${t.count}</td>
     </tr>`;
   }).join('');
 
   $('sheets').innerHTML = `<div class="sheet" data-close="1"><div>
     <h2>${esc(p.name)}</h2>
-    <div class="sub">${p.bed?`Bed ${esc(p.bed)} · `:''}Admitted ${fmtDMY(p.admitted)} · ${dates.length} charted day${dates.length===1?'':'s'}</div>
-    ${dates.length ? `<div class="scroll"><table class="t"><thead><tr>
-        <th class="l stick">Date</th><th>BP</th><th>Wt</th><th>In</th><th>Out</th><th>24 h</th><th>Cumulative</th>
-      </tr></thead><tbody>${rows}</tbody></table></div>`
-      : `<div class="empty"><strong>Nothing charted yet</strong>Readings will appear here once they are entered.</div>`}
+    <div class="sub">${p.bed?`Bed ${esc(p.bed)} · `:''}Admitted ${fmtDMY(p.admitted)} · ${days.length} charted day${days.length===1?'':'s'}</div>
+    ${days.length ? `<div class="scroll"><table class="t"><thead><tr>
+        <th class="l stick">Day</th><th>BP</th><th>Wt</th><th>In</th><th>Out</th><th>24 h</th><th>Cumulative</th><th>Entries</th>
+      </tr></thead><tbody>${rows}</tbody></table></div>
+      <div class="note">Each row totals every entry made in that 08:00 to 08:00 window.</div>`
+      : `<div class="empty"><strong>Nothing charted yet</strong>Entries will appear here once they are made.</div>`}
     <button class="btn ghost" style="margin-top:12px" data-close="1">Close</button>
   </div></div>`;
 }
 
+/* ---------------- delete patient ---------------- */
 function openDelete(pid){
   const p = S.patients.find(x => x.id === pid); if(!p) return;
-  const days = Object.keys(S.readings[pid]||{}).length;
+  const n = (S.entries[pid]||[]).length;
 
   $('sheets').innerHTML = `<div class="sheet" data-close="1"><div>
     <h2>Delete ${esc(p.name)}?</h2>
-    <div class="sub">This removes the patient and all ${days} charted day${days===1?'':'s'} for good. It cannot be undone.</div>
+    <div class="sub">This removes the patient and all ${n} entr${n===1?'y':'ies'} for good. It cannot be undone.</div>
     <div class="card">
       <div class="note" style="margin-top:0">If you only want them off the daily chart, close this and use
       <b>Discharge</b> instead — that keeps the record.</div>
@@ -608,6 +725,7 @@ function openDelete(pid){
   };
 }
 
+/* ---------------- admit ---------------- */
 function openAdmit(){
   $('sheets').innerHTML = `<div class="sheet" data-close="1"><div>
     <h2>Admit a patient</h2>
@@ -618,7 +736,7 @@ function openAdmit(){
         <div class="f"><label>Bed</label><input class="txt" id="a_bed" placeholder="838"></div>
       </div>
       <div class="row" style="margin-bottom:0">
-        <div class="f"><label>Admission date</label><input id="a_date" type="date" value="${todayISO()}"></div>
+        <div class="f"><label>Admission date</label><input id="a_date" type="date" value="${currentChartDay()}"></div>
       </div>
     </div>
     <button class="btn" id="doAdmit">Admit</button>
@@ -632,7 +750,7 @@ function openAdmit(){
     const btn = $('doAdmit'); btn.disabled = true; btn.textContent = 'Admitting…';
     const p = await savePatient({
       name, bed: $('a_bed').value.trim() || null,
-      admitted: $('a_date').value || todayISO(),
+      admitted: $('a_date').value || currentChartDay(),
       active: true, created_by: S.email,
     });
     if(p){ closeSheet(); toast('Admitted'); }
@@ -641,16 +759,13 @@ function openAdmit(){
 }
 
 function copyDay(){
-  const list = shownPatients();
-  const lines = [`Ward fluid balance — ${fmtDMY(S.date)}`, ''];
-  for(const p of list){
-    const r = (S.readings[p.id]||{})[S.date] || {};
-    const b = dayBalance(r), c = cumulativeTo(p.id, S.date);
-    const bp = r.sys && r.dia ? `${r.sys}/${r.dia}` : '—';
+  const lines = [`Ward fluid balance — ${fmtDMY(S.date)} (08:00 to 08:00)`, ''];
+  for(const p of shownPatients()){
+    const t = dayTotals(p.id, S.date), c = cumulativeTo(p.id, S.date);
     lines.push(
       `${p.bed ? p.bed+' · ' : ''}${p.name}`,
-      `  BP ${bp} | In ${r.intake ?? '—'} | Out ${r.output ?? '—'}`,
-      `  24h ${b===null?'—':signed(b)+' ml'} | Cum ${c===null?'—':signed(c)+' ml'}`,
+      `  BP ${t.bp?`${t.bp.sys}/${t.bp.dia}`:'—'} | In ${t.intake ?? '—'} | Out ${t.output ?? '—'}`,
+      `  24h ${t.balance===null?'—':signed(t.balance)+' ml'} | Cum ${c===null?'—':signed(c)+' ml'}`,
       ''
     );
   }
@@ -662,11 +777,11 @@ function copyDay(){
 function wire(){
   $('view').querySelectorAll('[data-open]').forEach(el => el.onclick = () => openEntry(el.dataset.open));
   $('view').querySelectorAll('[data-hist]').forEach(el => el.onclick = (e) => { e.stopPropagation(); openHistory(el.dataset.hist); });
+  $('view').querySelectorAll('[data-del]').forEach(el => el.onclick = (e) => { e.stopPropagation(); openDelete(el.dataset.del); });
   $('view').querySelectorAll('[data-toggle]').forEach(el => el.onclick = async () => {
     const p = S.patients.find(x => x.id === el.dataset.toggle);
     if(p) await savePatient({ ...p, active: !p.active });
   });
-  $('view').querySelectorAll('[data-del]').forEach(el => el.onclick = (e) => { e.stopPropagation(); openDelete(el.dataset.del); });
   $('view').querySelectorAll('[data-act]').forEach(el => el.onclick = async () => {
     const a = el.dataset.act;
     if(a === 'admit')   openAdmit();
@@ -684,9 +799,9 @@ document.addEventListener('click', (e) => {
 });
 
 document.querySelectorAll('.tab').forEach(b => b.onclick = () => { S.tab = b.dataset.tab; render(); });
-$('prev').onclick     = () => { S.date = shiftDate(S.date,-1); render(); };
-$('next').onclick     = () => { S.date = shiftDate(S.date, 1); render(); };
-$('todayBtn').onclick = () => { S.date = todayISO(); render(); };
+$('prev').onclick     = () => { S.date = shiftDate(S.date,-1); render(); if(S.openPid) paintSheet(); };
+$('next').onclick     = () => { S.date = shiftDate(S.date, 1); render(); if(S.openPid) paintSheet(); };
+$('todayBtn').onclick = () => { S.date = currentChartDay(); render(); if(S.openPid) paintSheet(); };
 $('signin').onclick   = doSignIn;
 $('pw').addEventListener('keydown', (e) => { if(e.key === 'Enter') doSignIn(); });
 
