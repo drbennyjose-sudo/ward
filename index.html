@@ -32,7 +32,7 @@ body{
 .hide{display:none !important}
 
 /* ---------- shell ---------- */
-#app{min-height:100vh;background:var(--paper);display:flex;flex-direction:column}
+#app{min-height:100vh;background:var(--paper);display:flex;flex-direction:column;overflow-x:hidden;max-width:100%}
 .top{background:var(--band);color:#EAF2ED;padding:calc(env(safe-area-inset-top) + 12px) 14px 0;flex:none}
 .title{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
 .title h1{margin:0;font-size:15px;font-weight:700;letter-spacing:.14em;text-transform:uppercase}
@@ -79,6 +79,9 @@ table.t tbody tr:active td{background:#F2F7F3}
 .card{background:var(--card);border:1px solid var(--rule);border-radius:10px;padding:14px;margin-bottom:12px}
 .card h3{margin:0 0 10px;font-size:13px;font-weight:700;letter-spacing:.04em}
 .row{display:flex;gap:8px;margin-bottom:9px}
+.row>.btn{flex:1 1 0;width:auto;min-width:0}
+.row.end{justify-content:flex-end}
+.row>.btn.auto{flex:0 1 auto;width:auto}
 .f{flex:1;min-width:0}
 .f label{display:block;font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);font-weight:600;margin-bottom:4px}
 .f input{width:100%;padding:11px 10px;border:1px solid var(--rule);border-radius:8px;font-size:16px;background:#FCFDFC;color:var(--ink);font-family:ui-monospace,"SF Mono",Menlo,monospace;font-variant-numeric:tabular-nums}
@@ -519,7 +522,9 @@ function viewWard(){
         <div class="row" style="margin-top:11px;margin-bottom:0">
           <button class="btn ghost sm" data-hist="${p.id}">Full chart</button>
           <button class="btn ghost sm" data-toggle="${p.id}">${p.active?'Discharge':'Re-admit'}</button>
-          <button class="btn ghost sm danger" data-del="${p.id}" style="flex:0 0 auto;padding-left:14px;padding-right:14px">Delete</button>
+        </div>
+        <div class="row end" style="margin-top:8px;margin-bottom:0">
+          <button class="btn ghost sm danger auto" data-del="${p.id}">Delete</button>
         </div>
       </div>`;
     }).join('');
